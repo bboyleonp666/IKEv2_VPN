@@ -1,0 +1,18 @@
+#!/bin/bash
+
+addVPNUser() {
+    ipsec_secrets=$1
+    read -p 'User name: ' new_user
+    if [[ $(sudo grep $new_user $ipsec_secrets) ]]; then
+        echo "User '$new_user' Already Exists!"
+        read -p 'User name: ' new_user
+    fi
+    read -p 'User password: ' new_passwd
+    echo "$new_user : EAP \"$new_passwd\"" | sudo tee -a $ipsec_secrets >/dev/null
+    sudo systemctl restart strongswan-starter
+}
+
+backup() {
+    ori_file=$1
+    sudo cp $ori_file{,.bak}
+}
