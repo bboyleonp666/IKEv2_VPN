@@ -1,11 +1,10 @@
 #!/bin/bash
 
 # Reference:
-# https://www.digitalocean.com/community/tutorials/how-to-set-up-an-ikev2-vpn-server-with-strongswan-on-ubuntu-20-04#connecting-to-the-vpn
+# https://www.digitalocean.com/community/tutorials/how-to-set-up-an-ikev2-vpn-server-with-strongswan-on-ubuntu-22-04
 
 # server IP
-# read -p 'Server IP: ' SERVER_IP
-SERVER_IP=45.63.126.139
+read -p 'Server IP: ' SERVER_IP
 
 # install packages required
 sudo apt update -y
@@ -65,13 +64,15 @@ conn ikev2-vpn
     ike=chacha20poly1305-sha512-curve25519-prfsha512,aes256gcm16-sha384-prfsha384-ecp384,aes256-sha1-modp1024,aes128-sha1-modp1024,3des-sha1-modp1024!
     esp=chacha20poly1305-sha512,aes256gcm16-ecp384,aes256-sha256,aes256-sha1,3des-sha1!
 EOF
-sed "s/leftid=@server_domain_or_IP/leftid=$SERVER_IP/g" /tmp/ipsec.conf | sudo tee $IPSEC_CONF >/dev/null
+sed -i "s/leftid=@server_domain_or_IP/leftid=$SERVER_IP/g" /tmp/ipsec.conf
+sed -i "s#leftcert=server-cert.pem#leftcert=/etc/ipsec.d/certs/server-cert.pem#g" /tmp/ipsec.conf
+sudo cp /tmp/ipsec.conf $IPSEC_CONF
 
 # Configure /etc/ipsec.secrets for StrongSwan
 source utils/functions
 IPSEC_SECRETS=/etc/ipsec.secrets
 backup $IPSEC_SECRETES
-echo ': RSA "server-key.pem"' | sudo tee -a $IPSEC_SECRETS >/dev/null
+echo ': RSA "/etc/ipsec.d/private/server-key.pem"' | sudo tee -a $IPSEC_SECRETS >/dev/null
 addVPNUser $IPSEC_SECRETS
 
 # Configure Firewall
@@ -81,7 +82,7 @@ ROUTE_RULES=/etc/ufw/before.rules
 backup $ROUTE_RULES
 
 ## make /etc/ufw/before.rules readable
-sudo chmod 644 $ROUTE_RULES
+sudo chmod 666 $ROUTE_RULES
 pattern_line_num=$(grep -n *filter $ROUTE_RULES | cut -d : -f 1)
 
 ### section 1
@@ -94,12 +95,12 @@ cat > /tmp/rule_sec2 <<EOF
 COMMIT
 
 *mangle
--A FORWARD --match policy --pol ipsec --dir in -s 10.10.10.0/24 -o your_interface -p tcp -m tcp --tcp-flags SYN,RST SYN -m tcpmss --mss 1361:1536 -j TCPMSS --set-mss 1360
+-A FORWARD --match policy --pol ipsec --dir in -s 10.10.10.0/24 -o eth0 -p tcp -m tcp --tcp-flags SYN,RST SYN -m tcpmss --mss 1361:1536 -j TCPMSS --set-mss 1360
 COMMIT
 
 EOF
 INTERFACE=$(ip route show default | cut -d ' ' -f 5)
-sed -i "s/your_interface/$INTERFACE/g" /tmp/rule_sec2
+sed -i "s/eth0/$INTERFACE/g" /tmp/rule_sec2
 ### section 3
 grep -A 4 *filter $ROUTE_RULES > /tmp/rule_sec3
 ### section 4
@@ -125,3 +126,6 @@ backup $UFW_CTL
 
 sudo ufw disable
 sudo ufw enable
+
+mkdir -p CA
+cp /etc/ipsec.d/cacerts/ca-cert.pem CA/ca-cert.pem
