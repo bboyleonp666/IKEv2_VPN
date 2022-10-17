@@ -13,6 +13,6 @@ addVPNUser() {
 }
 
 backup() {
-    ori_file=$1
-    sudo cp $ori_file{,.bak}
+    fpath=$1
+    sudo cp $fpath{,.bak}
 }

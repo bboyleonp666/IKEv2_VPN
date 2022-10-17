@@ -2,9 +2,15 @@
 
 # Reference:
 # https://www.digitalocean.com/community/tutorials/how-to-set-up-an-ikev2-vpn-server-with-strongswan-on-ubuntu-22-04
+ 
+source utils/functions
 
 # server IP
-read -p 'Server IP: ' SERVER_IP
+# Assume:
+#     Server with public IP
+#     Configure through SSH 
+SERVER_IP=$(echo $SSH_CONNECTION | awk '{print $3}')
+#read -p 'Server IP: ' SERVER_IP
 
 # install packages required
 sudo apt update -y
@@ -65,14 +71,14 @@ conn ikev2-vpn
     esp=chacha20poly1305-sha512,aes256gcm16-ecp384,aes256-sha256,aes256-sha1,3des-sha1!
 EOF
 sed -i "s/leftid=@server_domain_or_IP/leftid=$SERVER_IP/g" /tmp/ipsec.conf
-sed -i "s#leftcert=server-cert.pem#leftcert=/etc/ipsec.d/certs/server-cert.pem#g" /tmp/ipsec.conf
+# sed -i "s#leftcert=server-cert.pem#leftcert=/etc/ipsec.d/certs/server-cert.pem#g" /tmp/ipsec.conf
 sudo cp /tmp/ipsec.conf $IPSEC_CONF
 
 # Configure /etc/ipsec.secrets for StrongSwan
-source utils/functions
 IPSEC_SECRETS=/etc/ipsec.secrets
 backup $IPSEC_SECRETES
-echo ': RSA "/etc/ipsec.d/private/server-key.pem"' | sudo tee -a $IPSEC_SECRETS >/dev/null
+# echo ': RSA "/etc/ipsec.d/private/server-key.pem"' | sudo tee -a $IPSEC_SECRETS >/dev/null
+echo ': RSA "server-key.pem"' | sudo tee -a $IPSEC_SECRETS >/dev/null
 addVPNUser $IPSEC_SECRETS
 
 # Configure Firewall
@@ -125,7 +131,7 @@ backup $UFW_CTL
 [[ $(grep -e '^net/ipv4/ip_no_pmtu_disc=1' $UFW_CTL) ]] || echo 'net/ipv4/ip_no_pmtu_disc=1' | sudo tee -a $UFW_CTL >>/dev/null
 
 sudo ufw disable
-sudo ufw enable
+echo 'y' | sudo ufw enable
 
 mkdir -p CA
 cp /etc/ipsec.d/cacerts/ca-cert.pem CA/ca-cert.pem
