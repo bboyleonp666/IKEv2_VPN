@@ -1,4 +1,6 @@
 #!/bin/bash
 
 source utils/functions
-addVPNUser
+IPSEC_SECRET=/etc/ipsec.secrets
+
+addVPNUser $IPSEC_SECRET

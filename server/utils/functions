@@ -7,7 +7,7 @@ addVPNUser() {
         echo "User '$new_user' Already Exists!"
         read -p 'User name: ' new_user
     fi
-    read -p 'User password: ' new_passwd
+    read -s -p 'User password: ' new_passwd
     echo "$new_user : EAP \"$new_passwd\"" | sudo tee -a $ipsec_secrets >/dev/null
     sudo systemctl restart strongswan-starter
 }
