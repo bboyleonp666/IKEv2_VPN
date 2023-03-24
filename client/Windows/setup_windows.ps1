@@ -1,4 +1,8 @@
-param ($CAPath, $ServerIP, $VPNName)
+Param (
+	[Parameter(Mandatory)]$CAPath, 
+	[Parameter(Mandatory)]$ServerIP,
+	[Parameter(Mandatory)]$VPNName
+)
 
 Import-Certificate `
 	-CertStoreLocation cert:\LocalMachine\Root\ `
