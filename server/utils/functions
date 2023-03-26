@@ -2,12 +2,18 @@
 
 addVPNUser() {
     ipsec_secrets=$1
+    sudo -l > /dev/null
+    echo 'Please input username and password!'
+    echo 'If no password provided, your password will be randomly generated! (recommended)'
+
     read -p 'User name: ' new_user
     if [[ $(sudo grep $new_user $ipsec_secrets) ]]; then
         echo "User '$new_user' Already Exists!"
         read -p 'User name: ' new_user
     fi
+
     read -s -p 'User password: ' new_passwd
+    [[ $new_passwd == '' ]] && new_passwd=$(openssl rand -base64 32 | head -c 32) && echo -e "\n-----\nYour password is $new_passwd"
     echo "$new_user : EAP \"$new_passwd\"" | sudo tee -a $ipsec_secrets >/dev/null
     sudo systemctl restart strongswan-starter
 }
